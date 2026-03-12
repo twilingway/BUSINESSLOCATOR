@@ -8,13 +8,23 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export {
-  // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
+};
+
+// Deep linking configuration для expo-router
+const LINKING = {
+  prefixes: ['ru.beeline.location://'],
+  config: {
+    screens: {
+      auth: 'auth',
+      '(tabs)': '',
+      modal: 'modal',
+    },
+  },
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -51,6 +61,7 @@ function RootLayoutNav() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="auth" options={{ title: 'Авторизация' }} />
       </Stack>
     </ThemeProvider>
   );
