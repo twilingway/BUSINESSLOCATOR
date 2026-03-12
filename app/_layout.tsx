@@ -15,18 +15,6 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-// Deep linking configuration для expo-router
-const LINKING = {
-  prefixes: ['ru.beeline.location://'],
-  config: {
-    screens: {
-      auth: 'auth',
-      '(tabs)': '',
-      modal: 'modal',
-    },
-  },
-};
-
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -62,6 +50,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         <Stack.Screen name="auth" options={{ title: 'Авторизация' }} />
+        <Stack.Screen name="callback" options={{ title: 'OAuth Callback', headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );
