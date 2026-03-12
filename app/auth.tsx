@@ -1,6 +1,5 @@
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-import { getRandomBytesAsync } from "expo-crypto";
 import React, { useCallback, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
 
@@ -19,15 +18,8 @@ const OAUTH_CONFIG = {
   },
 };
 
-// Генерация случайного state для защиты от CSRF-атак
-const generateState = async (): Promise<string> => {
-  const array = await getRandomBytesAsync(16);
-  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
-};
-
 export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
-  const [authState, setAuthState] = useState<string>("");
 
   const [request, result, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -36,7 +28,6 @@ export default function AuthScreen() {
       redirectUri: REDIRECT_URI,
       extraParams: {
         ...OAUTH_CONFIG.extraParams,
-        state: authState,
       },
     },
     {
@@ -44,32 +35,46 @@ export default function AuthScreen() {
     }
   );
 
+  // Логирование запроса и результата
+  React.useEffect(() => {
+    if (request) {
+      console.log("=== AUTH REQUEST ===");
+      console.log("Request state (auto-generated):", request.state);
+      console.log("Full request:", JSON.stringify(request, null, 2));
+    }
+  }, [request]);
+
+  // Логирование результата авторизации
+  React.useEffect(() => {
+    if (result && result.type === "success") {
+      console.log("=== AUTH RESULT (on auth page) ===");
+      console.log("Result type:", result.type);
+      console.log("Result URL:", result.url);
+      console.log("Result params:", (result as any).params);
+      console.log("Result state from params:", (result as any).params?.state);
+      console.log("Full result:", JSON.stringify(result, null, 2));
+    } else if (result) {
+      console.log("=== AUTH RESULT (non-success) ===");
+      console.log("Result type:", result.type);
+      console.log("Full result:", JSON.stringify(result, null, 2));
+    }
+  }, [result]);
+
   const handleLogin = useCallback(async () => {
     setLoading(true);
 
     try {
-      // Генерируем state для защиты от CSRF-атак
-      const state = await generateState();
-      console.log("Generated state:", state);
-
-      // Устанавливаем state в authState для useAuthRequest
-      setAuthState(state);
-
-      // Небольшая задержка чтобы authState обновился перед promptAsync
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // Используем state который сгенерировал expo-auth-session
+      const state = request?.state;
+      console.log("=== STATE FROM EXPO-AUTH-SESSION ===");
+      console.log("State:", state);
 
       // Формируем полный URL авторизации для логирования
-      const authUrl = new URL(OAUTH_CONFIG.authorizationEndpoint);
-      authUrl.searchParams.append("client_id", OAUTH_CONFIG.clientId);
-      authUrl.searchParams.append("redirect_uri", REDIRECT_URI);
-      authUrl.searchParams.append("response_type", "code");
-      authUrl.searchParams.append("scope", OAUTH_CONFIG.scopes.join(" "));
-      authUrl.searchParams.append("max_age", OAUTH_CONFIG.extraParams.max_age);
-      authUrl.searchParams.append("state", state);
+      const authUrl = request?.url as string;
 
       console.log("=== FULL AUTH URL ===");
-      console.log(authUrl.toString());
-      console.log("=== STATE PARAM ===");
+      console.log(authUrl);
+      console.log("=== STATE SENT ===");
       console.log(state);
 
       // Открываем браузер для авторизации
@@ -79,7 +84,7 @@ export default function AuthScreen() {
       console.error("=== AUTH ERROR ===");
       console.error(error);
     }
-  }, [promptAsync]);
+  }, [promptAsync, request]);
 
   return (
     <View style={styles.container}>

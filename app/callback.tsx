@@ -1,50 +1,37 @@
 import * as Linking from "expo-linking";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View, Button, ScrollView } from "react-native";
+import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function CallbackScreen() {
-  const [url, setUrl] = useState<string>("");
-  const [code, setCode] = useState<string | null>(null);
-  const [state, setState] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [errorDescription, setErrorDescription] = useState<string | null>(null);
+  const params = useLocalSearchParams();
+  const router = useRouter();
+  const [deepLinkUrl, setDeepLinkUrl] = useState<string>("");
+
+  // Получаем параметры из роутера (expo-router)
+  const code = params.code as string | null;
+  const state = params.state as string | null;
+  const error = params.error as string | null;
+  const errorDescription = params.error_description as string | null;
 
   useEffect(() => {
+    console.log("=== CALLBACK PAGE LOADED ===");
+    console.log("Params from expo-router:", params);
+
+    // Обработка deep link при запуске
     const handleDeepLink = (event: { url: string }) => {
       console.log("=== CALLBACK DEEP LINK ===");
       console.log("Full URL:", event.url);
-
-      setUrl(event.url);
-
-      try {
-        const urlObj = new URL(event.url);
-        const codeParam = urlObj.searchParams.get("code");
-        const stateParam = urlObj.searchParams.get("state");
-        const errorParam = urlObj.searchParams.get("error");
-        const errorDescriptionParam = urlObj.searchParams.get("error_description");
-
-        console.log("Parsed code:", codeParam);
-        console.log("Parsed state:", stateParam);
-        console.log("Parsed error:", errorParam);
-
-        setCode(codeParam);
-        setState(stateParam);
-        setError(errorParam);
-        setErrorDescription(errorDescriptionParam);
-      } catch (err) {
-        console.error("Error parsing URL:", err);
-      }
+      setDeepLinkUrl(event.url);
     };
 
-    // Подписка на deep links
     const subscription = Linking.addEventListener("url", handleDeepLink);
 
-    // Проверка URL при запуске
     Linking.getInitialURL().then((initialUrl) => {
       if (initialUrl) {
         console.log("=== CALLBACK INITIAL URL ===");
         console.log("URL:", initialUrl);
-        handleDeepLink({ url: initialUrl });
+        setDeepLinkUrl(initialUrl);
       }
     });
 
@@ -54,17 +41,36 @@ export default function CallbackScreen() {
   }, []);
 
   const handleGoBack = () => {
-    // Навигация назад к экрану авторизации
-    Linking.openURL("ru.beeline.location://auth");
+    router.back();
   };
+
+  // Формируем оригинальный URL из параметров
+  const originalUrl = React.useMemo(() => {
+    const url = new URL("ru.beeline.location://callback");
+    if (code) url.searchParams.set("code", code);
+    if (state) url.searchParams.set("state", state);
+    if (error) url.searchParams.set("error", error);
+    if (errorDescription) url.searchParams.set("error_description", errorDescription);
+    return url.toString();
+  }, [code, state, error, errorDescription]);
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>OAuth Callback</Text>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Полный URL:</Text>
-        <Text style={styles.urlText}>{url || "Нет данных"}</Text>
+        <Text style={styles.sectionTitle}>Оригинальный URL редиректа:</Text>
+        <Text style={styles.urlText}>{originalUrl}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>URL из Deep Link:</Text>
+        <Text style={styles.urlText}>{deepLinkUrl || "Нет данных"}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Параметры из expo-router:</Text>
+        <Text style={styles.urlText}>{JSON.stringify(params, null, 2)}</Text>
       </View>
 
       {code && (
